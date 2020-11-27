@@ -264,7 +264,12 @@ RUN set -ex \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /docker-entrypoint-initdb.d
+RUN mkdir -p /docker-entrypoint-initdb.d && mkdir -p /gisdata && mkdir -p /gisdata/temp && chown -R postgres:postgres /gisdata
+RUN apt-get update && apt-get install wget unzip && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 COPY ./initdb-postgis.sh /docker-entrypoint-initdb.d/10_postgis.sh
 COPY ./update-postgis.sh /usr/local/bin
-
+COPY ./setup-loader.sh /docker-entrypoint-initdb.d/11_postgis.sh
+COPY ./load-all-data.sh /gisdata/load-all-data.sh
+COPY ./load-default-data.sh /gisdata/load-default-data.sh
+EXPOSE 5432
