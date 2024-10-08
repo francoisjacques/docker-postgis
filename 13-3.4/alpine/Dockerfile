@@ -4,9 +4,9 @@
 ARG BASE_IMAGE=postgres:13-alpine3.20
 FROM ${BASE_IMAGE}
 
-LABEL maintainer="PostGIS Project - https://postgis.net" \
+LABEL maintainer="Fork from PostGIS Project - https://postgis.net" \
       org.opencontainers.image.description="PostGIS 3.4.3 spatial database extension with PostgreSQL 13 Alpine" \
-      org.opencontainers.image.source="https://github.com/postgis/docker-postgis"
+      org.opencontainers.image.source="https://github.com/francoisjacques/docker-postgis"
 
 ENV POSTGIS_VERSION 3.4.3
 ENV POSTGIS_SHA256 802e1626252d12ec1d29261b95bf62930e1859587e44cad28d65b897a8d9ee6b
@@ -105,6 +105,7 @@ RUN set -eux \
         sfcgal \
         \
         json-c \
+	libintl icu icu-dev icu-data-full musl-locales musl-locales-lang \
         libstdc++ \
         pcre2 \
         protobuf-c \
@@ -120,5 +121,18 @@ RUN set -eux \
 # from the '/_pgis_full_version.txt' file. This is for experimental and internal purposes.
     && cat /_pgis_full_version.txt
 
+RUN apk add --no-cache --virtual .tiger-data-deps \
+    # for ripunzip - concurrent zip, instead of zip
+    openssl-dev rust cargo
+
+# modernized, concurrent, wget
+RUN apk add wget2 --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
+# modernized, concurrent, unzip
+RUN cargo install ripunzip 
+RUN mkdir -p /docker-entrypoint-initdb.d /gisdata/temp && chown -R postgres:postgres /gisdata
 COPY ./initdb-postgis.sh /docker-entrypoint-initdb.d/10_postgis.sh
 COPY ./update-postgis.sh /usr/local/bin
+COPY ./setup-loader.sh /docker-entrypoint-initdb.d/11_postgis.sh
+COPY ./load-all-data.sh /gisdata/load-all-data.sh
+COPY ./load-all-state-data.sh /gisdata/load-all-state-data.sh
+COPY ./load-default-data.sh /gisdata/load-default-data.sh
